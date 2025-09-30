@@ -1,0 +1,52 @@
+{
+  "name": "iska-scrum",
+  "version": "1.0.0",
+  "description": "A simple and user-friendly Scrum project management application built with Electron",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "dist": "electron-builder --publish=never"
+  },
+  "keywords": [
+    "electron",
+    "scrum",
+    "project-management",
+    "task-management"
+  ],
+  "author": "IskaCo",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^38.2.0",
+    "electron-builder": "^24.6.4"
+  },
+  "dependencies": {
+    "mysql2": "^3.6.5",
+    "pg": "^8.11.3",
+    "sqlite3": "^5.1.6"
+  },
+  "build": {
+    "appId": "com.iskaco.scrum",
+    "productName": "Iska Scrum",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    }
+  }
+}
