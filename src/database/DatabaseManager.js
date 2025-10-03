@@ -9,6 +9,11 @@ class DatabaseManager {
     this.configPath = path.join(os.homedir(), '.iska-scrum', 'config.json');
   }
 
+  // Normalize optional values for SQL drivers (convert undefined/empty string to null)
+  normalizeOptional(value) {
+    return (value === undefined || value === '') ? null : value;
+  }
+
   async initialize() {
     await this.loadConfig();
     await this.connect();
@@ -398,34 +403,48 @@ class DatabaseManager {
 
   // Time tracking methods
   async startTaskTimer(taskId, userId) {
-    const nowIso = new Date().toISOString();
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const HH = String(now.getHours()).padStart(2, '0');
+    const MM = String(now.getMinutes()).padStart(2, '0');
+    const SS = String(now.getSeconds()).padStart(2, '0');
+    const nowSql = `${yyyy}-${mm}-${dd} ${HH}:${MM}:${SS}`;
     const { type } = this.config;
     // Ensure no active timer for this user+task
     await this.stopActiveTimerIfAny(taskId, userId);
     if (type === 'sqlite') {
-      const result = await this.runSQLiteQuery('INSERT INTO time_entries (task_id, user_id, start_time) VALUES (?, ?, ?)', [taskId, userId, nowIso]);
-      return { id: result.lastID, task_id: taskId, user_id: userId, start_time: nowIso };
+      const result = await this.runSQLiteQuery('INSERT INTO time_entries (task_id, user_id, start_time) VALUES (?, ?, ?)', [taskId, userId, nowSql]);
+      return { id: result.lastID, task_id: taskId, user_id: userId, start_time: nowSql };
     } else if (type === 'mysql') {
-      const [result] = await this.db.execute('INSERT INTO time_entries (task_id, user_id, start_time) VALUES (?, ?, ?)', [taskId, userId, nowIso]);
-      return { id: result.insertId, task_id: taskId, user_id: userId, start_time: nowIso };
+      const [result] = await this.db.execute('INSERT INTO time_entries (task_id, user_id, start_time) VALUES (?, ?, ?)', [taskId, userId, nowSql]);
+      return { id: result.insertId, task_id: taskId, user_id: userId, start_time: nowSql };
     } else if (type === 'postgresql') {
-      const res = await this.db.query('INSERT INTO time_entries (task_id, user_id, start_time) VALUES ($1, $2, $3) RETURNING id', [taskId, userId, nowIso]);
-      return { id: res.rows[0].id, task_id: taskId, user_id: userId, start_time: nowIso };
+      const res = await this.db.query('INSERT INTO time_entries (task_id, user_id, start_time) VALUES ($1, $2, $3) RETURNING id', [taskId, userId, nowSql]);
+      return { id: res.rows[0].id, task_id: taskId, user_id: userId, start_time: nowSql };
     }
   }
 
   async stopTaskTimer(taskId, userId) {
-    const nowIso = new Date().toISOString();
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const HH = String(now.getHours()).padStart(2, '0');
+    const MM = String(now.getMinutes()).padStart(2, '0');
+    const SS = String(now.getSeconds()).padStart(2, '0');
+    const nowSql = `${yyyy}-${mm}-${dd} ${HH}:${MM}:${SS}`;
     const { type } = this.config;
     const active = await this.getActiveTimer(taskId, userId);
     if (!active) return { success: true, message: 'no active timer' };
-    const durationSeconds = Math.max(0, Math.floor((new Date(nowIso) - new Date(active.start_time)) / 1000));
+    const durationSeconds = Math.max(0, Math.floor((new Date(nowSql) - new Date(active.start_time)) / 1000));
     if (type === 'sqlite') {
-      await this.runSQLiteQuery('UPDATE time_entries SET end_time = ?, duration_seconds = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [nowIso, durationSeconds, active.id]);
+      await this.runSQLiteQuery('UPDATE time_entries SET end_time = ?, duration_seconds = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [nowSql, durationSeconds, active.id]);
     } else if (type === 'mysql') {
-      await this.db.execute('UPDATE time_entries SET end_time = ?, duration_seconds = ? WHERE id = ?', [nowIso, durationSeconds, active.id]);
+      await this.db.execute('UPDATE time_entries SET end_time = ?, duration_seconds = ? WHERE id = ?', [nowSql, durationSeconds, active.id]);
     } else if (type === 'postgresql') {
-      await this.db.query('UPDATE time_entries SET end_time = $1, duration_seconds = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3', [nowIso, durationSeconds, active.id]);
+      await this.db.query('UPDATE time_entries SET end_time = $1, duration_seconds = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3', [nowSql, durationSeconds, active.id]);
     }
     return { success: true };
   }
@@ -470,7 +489,7 @@ class DatabaseManager {
     if (type === 'sqlite') {
       return await this.getSQLiteQuery('SELECT * FROM time_entries WHERE user_id = ? AND start_time >= ? AND (end_time <= ? OR end_time IS NULL)', [userId, fromIso, toIso]);
     } else if (type === 'mysql') {
-      const [rows] = await this.db.execute('SELECT * FROM time_entries WHERE user_id = ? AND start_time >= ? AND (end_time <= ? OR end_time IS NULL)', [userId, fromIso, toIso]);
+      const [rows] = await this.db.execute('SELECT * FROM time_entries WHERE user_id = ? AND start_time >= ? AND (end_time <= ? OR end_time IS NULL)', [userId, fromIso.replace('T', ' ').slice(0, 19), toIso.replace('T', ' ').slice(0, 19)]);
       return rows;
     } else if (type === 'postgresql') {
       const res = await this.db.query('SELECT * FROM time_entries WHERE user_id = $1 AND start_time >= $2 AND (end_time <= $3 OR end_time IS NULL)', [userId, fromIso, toIso]);
@@ -696,29 +715,35 @@ class DatabaseManager {
   async createIssue(issueData) {
     const { project_id, title, description, status = 'open', priority = 'medium', created_by, assigned_to } = issueData;
     const { type } = this.config;
+    const pid = Number(project_id);
+    const desc = this.normalizeOptional(description);
+    const creator = this.normalizeOptional(created_by);
+    const assignee = this.normalizeOptional(assigned_to);
     
     if (type === 'sqlite') {
-      const result = await this.runSQLiteQuery('INSERT INTO issues (project_id, title, description, status, priority, created_by, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?)', [project_id, title, description, status, priority, created_by, assigned_to]);
-      return { id: result.lastID, project_id, title, description, status, priority, created_by, assigned_to };
+      const result = await this.runSQLiteQuery('INSERT INTO issues (project_id, title, description, status, priority, created_by, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?)', [pid, title, desc, status, priority, creator, assignee]);
+      return { id: result.lastID, project_id: pid, title, description: desc, status, priority, created_by: creator, assigned_to: assignee };
     } else if (type === 'mysql') {
-      const [result] = await this.db.execute('INSERT INTO issues (project_id, title, description, status, priority, created_by, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?)', [project_id, title, description, status, priority, created_by, assigned_to]);
-      return { id: result.insertId, project_id, title, description, status, priority, created_by, assigned_to };
+      const [result] = await this.db.execute('INSERT INTO issues (project_id, title, description, status, priority, created_by, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?)', [pid, title, desc, status, priority, creator, assignee]);
+      return { id: result.insertId, project_id: pid, title, description: desc, status, priority, created_by: creator, assigned_to: assignee };
     } else if (type === 'postgresql') {
-      const result = await this.db.query('INSERT INTO issues (project_id, title, description, status, priority, created_by, assigned_to) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id', [project_id, title, description, status, priority, created_by, assigned_to]);
-      return { id: result.rows[0].id, project_id, title, description, status, priority, created_by, assigned_to };
+      const result = await this.db.query('INSERT INTO issues (project_id, title, description, status, priority, created_by, assigned_to) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id', [pid, title, desc, status, priority, creator, assignee]);
+      return { id: result.rows[0].id, project_id: pid, title, description: desc, status, priority, created_by: creator, assigned_to: assignee };
     }
   }
 
   async updateIssue(issueId, issueData) {
     const { title, description, status, priority, assigned_to } = issueData;
     const { type } = this.config;
+    const desc = this.normalizeOptional(description);
+    const assignee = this.normalizeOptional(assigned_to);
     
     if (type === 'sqlite') {
-      await this.runSQLiteQuery('UPDATE issues SET title = ?, description = ?, status = ?, priority = ?, assigned_to = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [title, description, status, priority, assigned_to, issueId]);
+      await this.runSQLiteQuery('UPDATE issues SET title = ?, description = ?, status = ?, priority = ?, assigned_to = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [title, desc, status, priority, assignee, issueId]);
     } else if (type === 'mysql') {
-      await this.db.execute('UPDATE issues SET title = ?, description = ?, status = ?, priority = ?, assigned_to = ? WHERE id = ?', [title, description, status, priority, assigned_to, issueId]);
+      await this.db.execute('UPDATE issues SET title = ?, description = ?, status = ?, priority = ?, assigned_to = ? WHERE id = ?', [title, desc, status, priority, assignee, issueId]);
     } else if (type === 'postgresql') {
-      await this.db.query('UPDATE issues SET title = $1, description = $2, status = $3, priority = $4, assigned_to = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6', [title, description, status, priority, assigned_to, issueId]);
+      await this.db.query('UPDATE issues SET title = $1, description = $2, status = $3, priority = $4, assigned_to = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6', [title, desc, status, priority, assignee, issueId]);
     }
     
     return { success: true };

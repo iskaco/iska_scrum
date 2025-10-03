@@ -95,28 +95,38 @@ class ScrumApp {
     }
 
     initJalaliPickers() {
-        // Ensure jQuery and plugin loaded
-        if (typeof $ === 'undefined' || !$.fn.pDatepicker) return;
-        const $taskDue = $('#taskDueDate');
-        if ($taskDue.length && !$taskDue.data('pDatepicker')) {
-            $taskDue.pDatepicker({
-                format: 'YYYY/MM/DD HH:mm',
-                timePicker: { enabled: true },
-                initialValue: false,
-                autoClose: true,
-                calendarType: 'persian'
-            });
+        // Use Flatpickr with Jalali plugin
+        if (typeof flatpickr === 'undefined') return;
+        if (typeof window.jalali === 'function') {
+            try { window.jalali(flatpickr); } catch {}
         }
-        const $subDue = $('#subtaskDueDate');
-        if ($subDue.length && !$subDue.data('pDatepicker')) {
-            $subDue.pDatepicker({
-                format: 'YYYY/MM/DD HH:mm',
-                timePicker: { enabled: true },
-                initialValue: false,
-                autoClose: true,
-                calendarType: 'persian'
+        const initOne = (inputId, hiddenId) => {
+            const input = document.getElementById(inputId);
+            const hidden = document.getElementById(hiddenId);
+            if (!input) return;
+            if (input._flatpickr) return;
+            flatpickr.localize(flatpickr.l10ns.fa || {});
+            flatpickr(input, {
+                enableTime: true,
+                dateFormat: 'Y/m/d H:i',
+                altInput: true,
+                altFormat: 'Y/m/d H:i',
+                locale: flatpickr.l10ns.fa,
+                onChange: function(selectedDates) {
+                    if (!hidden) return;
+                    const d = selectedDates && selectedDates[0];
+                    if (!d) { hidden.value = ''; return; }
+                    const yyyy = d.getFullYear();
+                    const mm = String(d.getMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getDate()).padStart(2, '0');
+                    const HH = String(d.getHours()).padStart(2, '0');
+                    const MM = String(d.getMinutes()).padStart(2, '0');
+                    hidden.value = `${yyyy}-${mm}-${dd} ${HH}:${MM}:00`;
+                }
             });
-        }
+        };
+        initOne('taskDueDate', 'taskDueDateGregorian');
+        initOne('subtaskDueDate', 'subtaskDueDateGregorian');
     }
 
     async loadInitialData() {
@@ -145,6 +155,7 @@ class ScrumApp {
         document.getElementById('projectTitle').textContent = project.name;
         this.loadProjectIssues();
         this.switchView('list'); // Default to list view
+        this.renderTeamTimePanel();
     }
 
     async loadProjectIssues() {
@@ -156,6 +167,7 @@ class ScrumApp {
             } else {
                 await this.renderIssuesList();
             }
+            this.renderTeamTimePanel();
             this.hideLoading();
         } catch (error) {
             console.error('Error loading issues:', error);
@@ -322,15 +334,13 @@ class ScrumApp {
     }
 
     formatDuration(totalSeconds) {
-        const s = Number(totalSeconds || 0);
+        const s = Math.max(0, Number(totalSeconds || 0));
         const h = Math.floor(s / 3600);
         const m = Math.floor((s % 3600) / 60);
         const sec = s % 60;
-        const parts = [];
-        if (h) parts.push(`${h}س`);
-        if (m || h) parts.push(`${m}د`);
-        parts.push(`${sec}ث`);
-        return parts.join(' ');
+        const mm = String(m).padStart(2, '0');
+        const ss = String(sec).padStart(2, '0');
+        return `${h}:${mm}:${ss}`;
     }
 
     // Project Management
@@ -991,6 +1001,27 @@ class ScrumApp {
         }, 1000);
     }
 
+    async renderTeamTimePanel() {
+        const panel = document.getElementById('teamTimePanel');
+        if (!panel) return;
+        if (!this.users || this.users.length === 0) { panel.style.display = 'none'; return; }
+        const start = new Date(); start.setHours(0,0,0,0);
+        const end = new Date(); end.setHours(23,59,59,999);
+        const fromIso = start.toISOString();
+        const toIso = end.toISOString();
+        const items = [];
+        for (const user of this.users) {
+            try {
+                const entries = await ipcRenderer.invoke('get-user-time-report', user.id, fromIso, toIso);
+                const total = (entries || []).reduce((sum, e) => sum + Number(e.duration_seconds || 0), 0);
+                items.push({ name: user.name, total });
+            } catch {}
+        }
+        if (items.length === 0) { panel.style.display = 'none'; return; }
+        panel.innerHTML = items.map(i => `<span class="team-time-chip">${i.name}: ${this.formatDuration(i.total)}</span>`).join(' ');
+        panel.style.display = 'flex';
+    }
+
     createKanbanCard(issue) {
         const card = document.createElement('div');
         card.className = 'kanban-card';
@@ -1065,10 +1096,19 @@ class ScrumApp {
             form.status.value = task.status;
             form.priority.value = task.priority;
             form.assigned_to.value = task.assigned_to || '';
-            form.due_date.value = task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : '';
+            const g = task.due_date ? new Date(task.due_date) : null;
+            const gStr = g ? `${g.getFullYear()}-${String(g.getMonth()+1).padStart(2,'0')}-${String(g.getDate()).padStart(2,'0')} ${String(g.getHours()).padStart(2,'0')}:${String(g.getMinutes()).padStart(2,'0')}:00` : '';
+            const hidden = document.getElementById('taskDueDateGregorian');
+            if (hidden) hidden.value = gStr;
+            setTimeout(() => {
+                const input = document.getElementById('taskDueDate');
+                if (input && input._flatpickr && g) input._flatpickr.setDate(g, true);
+            }, 0);
         } else {
             title.textContent = 'تسک جدید';
             form.reset();
+            const hidden = document.getElementById('taskDueDateGregorian');
+            if (hidden) hidden.value = '';
         }
         
         this.populateUserSelect('taskAssignedTo');
@@ -1090,7 +1130,7 @@ class ScrumApp {
             status: formData.get('status'),
             priority: formData.get('priority'),
             assigned_to: formData.get('assigned_to') || null,
-            due_date: formData.get('due_date') || null
+            due_date: (document.getElementById('taskDueDateGregorian').value || null)
         };
 
         try {
@@ -1132,10 +1172,19 @@ class ScrumApp {
             form.description.value = subtask.description || '';
             form.status.value = subtask.status;
             form.assigned_to.value = subtask.assigned_to || '';
-            form.due_date.value = subtask.due_date ? new Date(subtask.due_date).toISOString().slice(0, 16) : '';
+            const g = subtask.due_date ? new Date(subtask.due_date) : null;
+            const gStr = g ? `${g.getFullYear()}-${String(g.getMonth()+1).padStart(2,'0')}-${String(g.getDate()).padStart(2,'0')} ${String(g.getHours()).padStart(2,'0')}:${String(g.getMinutes()).padStart(2,'0')}:00` : '';
+            const hidden = document.getElementById('subtaskDueDateGregorian');
+            if (hidden) hidden.value = gStr;
+            setTimeout(() => {
+                const input = document.getElementById('subtaskDueDate');
+                if (input && input._flatpickr && g) input._flatpickr.setDate(g, true);
+            }, 0);
         } else {
             title.textContent = 'زیرتسک جدید';
             form.reset();
+            const hidden = document.getElementById('subtaskDueDateGregorian');
+            if (hidden) hidden.value = '';
         }
         
         this.populateUserSelect('subtaskAssignedTo');
@@ -1156,7 +1205,7 @@ class ScrumApp {
             description: formData.get('description'),
             status: formData.get('status'),
             assigned_to: formData.get('assigned_to') || null,
-            due_date: formData.get('due_date') || null
+            due_date: (document.getElementById('subtaskDueDateGregorian').value || null)
         };
 
         try {

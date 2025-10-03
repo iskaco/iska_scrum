@@ -1,0 +1,41 @@
+version: 1
+name: Iska Scrum Tools
+description: Tools for interacting with Iska Scrum app logic via DatabaseManager.
+tools:
+  - id: list-projects
+    name: List Projects
+    description: Returns all projects from the configured database.
+    command: node .cursor/tools/list-projects.js
+    input:
+      schema:
+        type: object
+        properties: {}
+        required: []
+  - id: create-project
+    name: Create Project
+    description: Creates a new project.
+    command: node .cursor/tools/create-project.js
+    input:
+      schema:
+        type: object
+        properties:
+          name:
+            type: string
+          description:
+            type: string
+          status:
+            type: string
+            enum: [active, inactive, completed]
+        required: [name]
+  - id: list-issues
+    name: List Issues
+    description: Lists issues for a project id.
+    command: node .cursor/tools/list-issues.js
+    input:
+      schema:
+        type: object
+        properties:
+          project_id:
+            type: integer
+        required: [project_id]
+

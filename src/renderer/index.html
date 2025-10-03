@@ -1,524 +1,667 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Iska Scrum - مدیریت پروژه اسکرام</title>
-    <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-</head>
-<body>
+    <link rel="stylesheet" href="styles/main.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
     <div id="app">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <div class="logo">
-                    <i class="fas fa-tasks"></i>
-                    <h1>Iska Scrum</h1>
-                </div>
-                <div class="header-actions">
-                    <button class="btn btn-primary" id="newProjectBtn">
-                        <i class="fas fa-plus"></i>
-                        پروژه جدید
-                    </button>
-                    <button class="btn btn-secondary" id="manageUsersBtn">
-                        <i class="fas fa-users"></i>
-                        مدیریت اعضا
-                    </button>
-                    <button class="btn btn-outline" id="databaseSettingsBtn">
-                        <i class="fas fa-database"></i>
-                        تنظیمات دیتابیس
-                    </button>
-                </div>
+      <!-- Header -->
+      <header class="header">
+        <div class="header-content">
+          <div class="logo">
+            <i class="fas fa-tasks"></i>
+            <h1>Iska Scrum</h1>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary" id="newProjectBtn">
+              <i class="fas fa-plus"></i>
+              پروژه جدید
+            </button>
+            <button class="btn btn-secondary" id="manageUsersBtn">
+              <i class="fas fa-users"></i>
+              مدیریت اعضا
+            </button>
+            <button class="btn btn-outline" id="databaseSettingsBtn">
+              <i class="fas fa-database"></i>
+              تنظیمات دیتابیس
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <div class="sidebar-section">
+            <h3>پروژه‌ها</h3>
+            <div id="projectsList" class="projects-list">
+              <!-- Projects will be loaded here -->
             </div>
-        </header>
+          </div>
+        </aside>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Sidebar -->
-            <aside class="sidebar">
-                <div class="sidebar-section">
-                    <h3>پروژه‌ها</h3>
-                    <div id="projectsList" class="projects-list">
-                        <!-- Projects will be loaded here -->
-                    </div>
-                </div>
-            </aside>
-
-            <!-- Content Area -->
-            <div class="content-area">
-                <div id="welcomeScreen" class="welcome-screen">
-                    <div class="welcome-content">
-                        <i class="fas fa-rocket"></i>
-                        <h2>به Iska Scrum خوش آمدید</h2>
-                        <p>برای شروع، یک پروژه جدید ایجاد کنید یا از لیست پروژه‌های موجود یکی را انتخاب کنید.</p>
-                        <button class="btn btn-primary btn-large" id="createFirstProjectBtn">
-                            <i class="fas fa-plus"></i>
-                            ایجاد پروژه جدید
-                        </button>
-                    </div>
-                </div>
-
-                <div id="projectView" class="project-view" style="display: none;">
-                    <div class="project-header">
-                        <h2 id="projectTitle">نام پروژه</h2>
-                        <div class="project-actions">
-                            <button class="btn btn-outline" id="listViewBtn">
-                                <i class="fas fa-list"></i>
-                                نمای لیست
-                            </button>
-                            <button class="btn btn-outline" id="boardViewBtn">
-                                <i class="fas fa-columns"></i>
-                                نمای بورد
-                            </button>
-                            <button class="btn btn-primary" id="newIssueBtn">
-                                <i class="fas fa-plus"></i>
-                                ایشو جدید
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- List View -->
-                    <div id="listView" class="list-view">
-                        <div id="issuesList" class="issues-list">
-                            <!-- Issues will be loaded here -->
-                        </div>
-                    </div>
-                    
-                    <!-- Board View -->
-                    <div id="boardView" class="board-view" style="display: none;">
-                        <div class="kanban-board">
-                            <div class="kanban-column" data-status="open">
-                                <div class="column-header">
-                                    <h3>باز</h3>
-                                    <span class="count" id="openCount">0</span>
-                                </div>
-                                <div class="column-content" id="openIssues">
-                                    <!-- Open issues will be loaded here -->
-                                </div>
-                            </div>
-                            
-                            <div class="kanban-column" data-status="in_progress">
-                                <div class="column-header">
-                                    <h3>در حال انجام</h3>
-                                    <span class="count" id="inProgressCount">0</span>
-                                </div>
-                                <div class="column-content" id="inProgressIssues">
-                                    <!-- In progress issues will be loaded here -->
-                                </div>
-                            </div>
-                            
-                            <div class="kanban-column" data-status="review">
-                                <div class="column-header">
-                                    <h3>بررسی</h3>
-                                    <span class="count" id="reviewCount">0</span>
-                                </div>
-                                <div class="column-content" id="reviewIssues">
-                                    <!-- Review issues will be loaded here -->
-                                </div>
-                            </div>
-                            
-                            <div class="kanban-column" data-status="closed">
-                                <div class="column-header">
-                                    <h3>بسته</h3>
-                                    <span class="count" id="closedCount">0</span>
-                                </div>
-                                <div class="column-content" id="closedIssues">
-                                    <!-- Closed issues will be loaded here -->
-                                </div>
-                            </div>
-                        </div>
-                        <div style="margin-top: 1rem;">
-                            <h3 style="margin-bottom: .5rem;">بورد تسک‌ها</h3>
-                            <div class="kanban-board">
-                                <div class="kanban-column" data-task-status="pending">
-                                    <div class="column-header">
-                                        <h3>در انتظار</h3>
-                                        <span class="count" id="pendingTaskCount">0</span>
-                                    </div>
-                                    <div class="column-content" id="pendingTasks"></div>
-                                </div>
-                                <div class="kanban-column" data-task-status="in_progress">
-                                    <div class="column-header">
-                                        <h3>در حال انجام</h3>
-                                        <span class="count" id="inProgressTaskCount">0</span>
-                                    </div>
-                                    <div class="column-content" id="inProgressTasks"></div>
-                                </div>
-                                <div class="kanban-column" data-task-status="review">
-                                    <div class="column-header">
-                                        <h3>بررسی</h3>
-                                        <span class="count" id="reviewTaskCount">0</span>
-                                    </div>
-                                    <div class="column-content" id="reviewTasks"></div>
-                                </div>
-                                <div class="kanban-column" data-task-status="completed">
-                                    <div class="column-header">
-                                        <h3>تکمیل شده</h3>
-                                        <span class="count" id="completedTaskCount">0</span>
-                                    </div>
-                                    <div class="column-content" id="completedTasks"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <!-- Content Area -->
+        <div class="content-area">
+          <div id="welcomeScreen" class="welcome-screen">
+            <div class="welcome-content">
+              <i class="fas fa-rocket"></i>
+              <h2>به Iska Scrum خوش آمدید</h2>
+              <p>
+                برای شروع، یک پروژه جدید ایجاد کنید یا از لیست پروژه‌های موجود
+                یکی را انتخاب کنید.
+              </p>
+              <button
+                class="btn btn-primary btn-large"
+                id="createFirstProjectBtn"
+              >
+                <i class="fas fa-plus"></i>
+                ایجاد پروژه جدید
+              </button>
             </div>
-        </main>
+          </div>
+
+          <div id="projectView" class="project-view" style="display: none">
+            <div class="project-header">
+              <h2 id="projectTitle">نام پروژه</h2>
+              <div class="project-actions">
+                <button class="btn btn-outline" id="listViewBtn">
+                  <i class="fas fa-list"></i>
+                  نمای لیست
+                </button>
+                <button class="btn btn-outline" id="boardViewBtn">
+                  <i class="fas fa-columns"></i>
+                  نمای بورد
+                </button>
+                <button class="btn btn-primary" id="newIssueBtn">
+                  <i class="fas fa-plus"></i>
+                  ایشو جدید
+                </button>
+              </div>
+            </div>
+            <div
+              id="teamTimePanel"
+              class="team-time-panel"
+              style="display: none"
+            ></div>
+
+            <!-- List View -->
+            <div id="listView" class="list-view">
+              <div id="issuesList" class="issues-list">
+                <!-- Issues will be loaded here -->
+              </div>
+            </div>
+
+            <!-- Board View -->
+            <div id="boardView" class="board-view" style="display: none">
+              <div class="kanban-board">
+                <div class="kanban-column" data-status="open">
+                  <div class="column-header">
+                    <h3>باز</h3>
+                    <span class="count" id="openCount">0</span>
+                  </div>
+                  <div class="column-content" id="openIssues">
+                    <!-- Open issues will be loaded here -->
+                  </div>
+                </div>
+
+                <div class="kanban-column" data-status="in_progress">
+                  <div class="column-header">
+                    <h3>در حال انجام</h3>
+                    <span class="count" id="inProgressCount">0</span>
+                  </div>
+                  <div class="column-content" id="inProgressIssues">
+                    <!-- In progress issues will be loaded here -->
+                  </div>
+                </div>
+
+                <div class="kanban-column" data-status="review">
+                  <div class="column-header">
+                    <h3>بررسی</h3>
+                    <span class="count" id="reviewCount">0</span>
+                  </div>
+                  <div class="column-content" id="reviewIssues">
+                    <!-- Review issues will be loaded here -->
+                  </div>
+                </div>
+
+                <div class="kanban-column" data-status="closed">
+                  <div class="column-header">
+                    <h3>بسته</h3>
+                    <span class="count" id="closedCount">0</span>
+                  </div>
+                  <div class="column-content" id="closedIssues">
+                    <!-- Closed issues will be loaded here -->
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top: 1rem">
+                <h3 style="margin-bottom: 0.5rem">بورد تسک‌ها</h3>
+                <div class="kanban-board">
+                  <div class="kanban-column" data-task-status="pending">
+                    <div class="column-header">
+                      <h3>در انتظار</h3>
+                      <span class="count" id="pendingTaskCount">0</span>
+                    </div>
+                    <div class="column-content" id="pendingTasks"></div>
+                  </div>
+                  <div class="kanban-column" data-task-status="in_progress">
+                    <div class="column-header">
+                      <h3>در حال انجام</h3>
+                      <span class="count" id="inProgressTaskCount">0</span>
+                    </div>
+                    <div class="column-content" id="inProgressTasks"></div>
+                  </div>
+                  <div class="kanban-column" data-task-status="review">
+                    <div class="column-header">
+                      <h3>بررسی</h3>
+                      <span class="count" id="reviewTaskCount">0</span>
+                    </div>
+                    <div class="column-content" id="reviewTasks"></div>
+                  </div>
+                  <div class="kanban-column" data-task-status="completed">
+                    <div class="column-header">
+                      <h3>تکمیل شده</h3>
+                      <span class="count" id="completedTaskCount">0</span>
+                    </div>
+                    <div class="column-content" id="completedTasks"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
 
     <!-- Modals -->
     <!-- Database Settings Modal -->
     <div id="databaseSettingsModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>تنظیمات دیتابیس</h3>
-                <button class="close-btn" id="closeDatabaseModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="databaseForm">
-                    <div class="form-group">
-                        <label for="dbType">نوع دیتابیس:</label>
-                        <select id="dbType" name="type" required>
-                            <option value="sqlite">SQLite (محلی)</option>
-                            <option value="mysql">MySQL</option>
-                            <option value="postgresql">PostgreSQL</option>
-                        </select>
-                    </div>
-
-                    <!-- SQLite Settings -->
-                    <div id="sqliteSettings" class="db-settings">
-                        <div class="form-group">
-                            <label for="sqlitePath">مسیر فایل دیتابیس:</label>
-                            <input type="text" id="sqlitePath" name="sqlite.path" placeholder="مسیر فایل دیتابیس">
-                        </div>
-                    </div>
-
-                    <!-- MySQL Settings -->
-                    <div id="mysqlSettings" class="db-settings" style="display: none;">
-                        <div class="form-group">
-                            <label for="mysqlHost">هاست:</label>
-                            <input type="text" id="mysqlHost" name="mysql.host" placeholder="localhost">
-                        </div>
-                        <div class="form-group">
-                            <label for="mysqlPort">پورت:</label>
-                            <input type="number" id="mysqlPort" name="mysql.port" placeholder="3306">
-                        </div>
-                        <div class="form-group">
-                            <label for="mysqlUser">نام کاربری:</label>
-                            <input type="text" id="mysqlUser" name="mysql.user" placeholder="root">
-                        </div>
-                        <div class="form-group">
-                            <label for="mysqlPassword">رمز عبور:</label>
-                            <input type="password" id="mysqlPassword" name="mysql.password">
-                        </div>
-                        <div class="form-group">
-                            <label for="mysqlDatabase">نام دیتابیس:</label>
-                            <input type="text" id="mysqlDatabase" name="mysql.database" placeholder="iska_scrum">
-                        </div>
-                    </div>
-
-                    <!-- PostgreSQL Settings -->
-                    <div id="postgresqlSettings" class="db-settings" style="display: none;">
-                        <div class="form-group">
-                            <label for="pgHost">هاست:</label>
-                            <input type="text" id="pgHost" name="postgresql.host" placeholder="localhost">
-                        </div>
-                        <div class="form-group">
-                            <label for="pgPort">پورت:</label>
-                            <input type="number" id="pgPort" name="postgresql.port" placeholder="5432">
-                        </div>
-                        <div class="form-group">
-                            <label for="pgUser">نام کاربری:</label>
-                            <input type="text" id="pgUser" name="postgresql.user" placeholder="postgres">
-                        </div>
-                        <div class="form-group">
-                            <label for="pgPassword">رمز عبور:</label>
-                            <input type="password" id="pgPassword" name="postgresql.password">
-                        </div>
-                        <div class="form-group">
-                            <label for="pgDatabase">نام دیتابیس:</label>
-                            <input type="text" id="pgDatabase" name="postgresql.database" placeholder="iska_scrum">
-                        </div>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" id="testConnectionBtn">تست اتصال</button>
-                        <button type="submit" class="btn btn-primary">ذخیره تنظیمات</button>
-                    </div>
-                </form>
-            </div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>تنظیمات دیتابیس</h3>
+          <button class="close-btn" id="closeDatabaseModal">&times;</button>
         </div>
+        <div class="modal-body">
+          <form id="databaseForm">
+            <div class="form-group">
+              <label for="dbType">نوع دیتابیس:</label>
+              <select id="dbType" name="type" required>
+                <option value="sqlite">SQLite (محلی)</option>
+                <option value="mysql">MySQL</option>
+                <option value="postgresql">PostgreSQL</option>
+              </select>
+            </div>
+
+            <!-- SQLite Settings -->
+            <div id="sqliteSettings" class="db-settings">
+              <div class="form-group">
+                <label for="sqlitePath">مسیر فایل دیتابیس:</label>
+                <input
+                  type="text"
+                  id="sqlitePath"
+                  name="sqlite.path"
+                  placeholder="مسیر فایل دیتابیس"
+                />
+              </div>
+            </div>
+
+            <!-- MySQL Settings -->
+            <div id="mysqlSettings" class="db-settings" style="display: none">
+              <div class="form-group">
+                <label for="mysqlHost">هاست:</label>
+                <input
+                  type="text"
+                  id="mysqlHost"
+                  name="mysql.host"
+                  placeholder="localhost"
+                />
+              </div>
+              <div class="form-group">
+                <label for="mysqlPort">پورت:</label>
+                <input
+                  type="number"
+                  id="mysqlPort"
+                  name="mysql.port"
+                  placeholder="3306"
+                />
+              </div>
+              <div class="form-group">
+                <label for="mysqlUser">نام کاربری:</label>
+                <input
+                  type="text"
+                  id="mysqlUser"
+                  name="mysql.user"
+                  placeholder="root"
+                />
+              </div>
+              <div class="form-group">
+                <label for="mysqlPassword">رمز عبور:</label>
+                <input
+                  type="password"
+                  id="mysqlPassword"
+                  name="mysql.password"
+                />
+              </div>
+              <div class="form-group">
+                <label for="mysqlDatabase">نام دیتابیس:</label>
+                <input
+                  type="text"
+                  id="mysqlDatabase"
+                  name="mysql.database"
+                  placeholder="iska_scrum"
+                />
+              </div>
+            </div>
+
+            <!-- PostgreSQL Settings -->
+            <div
+              id="postgresqlSettings"
+              class="db-settings"
+              style="display: none"
+            >
+              <div class="form-group">
+                <label for="pgHost">هاست:</label>
+                <input
+                  type="text"
+                  id="pgHost"
+                  name="postgresql.host"
+                  placeholder="localhost"
+                />
+              </div>
+              <div class="form-group">
+                <label for="pgPort">پورت:</label>
+                <input
+                  type="number"
+                  id="pgPort"
+                  name="postgresql.port"
+                  placeholder="5432"
+                />
+              </div>
+              <div class="form-group">
+                <label for="pgUser">نام کاربری:</label>
+                <input
+                  type="text"
+                  id="pgUser"
+                  name="postgresql.user"
+                  placeholder="postgres"
+                />
+              </div>
+              <div class="form-group">
+                <label for="pgPassword">رمز عبور:</label>
+                <input
+                  type="password"
+                  id="pgPassword"
+                  name="postgresql.password"
+                />
+              </div>
+              <div class="form-group">
+                <label for="pgDatabase">نام دیتابیس:</label>
+                <input
+                  type="text"
+                  id="pgDatabase"
+                  name="postgresql.database"
+                  placeholder="iska_scrum"
+                />
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="testConnectionBtn"
+              >
+                تست اتصال
+              </button>
+              <button type="submit" class="btn btn-primary">
+                ذخیره تنظیمات
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
     <!-- User Management Modal -->
     <div id="userManagementModal" class="modal">
-        <div class="modal-content large">
-            <div class="modal-header">
-                <h3>مدیریت اعضای تیم</h3>
-                <button class="close-btn" id="closeUserModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="user-actions">
-                    <button class="btn btn-primary" id="addUserBtn">
-                        <i class="fas fa-plus"></i>
-                        افزودن عضو جدید
-                    </button>
-                </div>
-                <div id="usersList" class="users-list">
-                    <!-- Users will be loaded here -->
-                </div>
-            </div>
+      <div class="modal-content large">
+        <div class="modal-header">
+          <h3>مدیریت اعضای تیم</h3>
+          <button class="close-btn" id="closeUserModal">&times;</button>
         </div>
+        <div class="modal-body">
+          <div class="user-actions">
+            <button class="btn btn-primary" id="addUserBtn">
+              <i class="fas fa-plus"></i>
+              افزودن عضو جدید
+            </button>
+          </div>
+          <div id="usersList" class="users-list">
+            <!-- Users will be loaded here -->
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Project Modal -->
     <div id="projectModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="projectModalTitle">پروژه جدید</h3>
-                <button class="close-btn" id="closeProjectModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="projectForm">
-                    <div class="form-group">
-                        <label for="projectName">نام پروژه:</label>
-                        <input type="text" id="projectName" name="name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="projectDescription">توضیحات:</label>
-                        <textarea id="projectDescription" name="description" rows="4"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="projectStatus">وضعیت:</label>
-                        <select id="projectStatus" name="status">
-                            <option value="active">فعال</option>
-                            <option value="inactive">غیرفعال</option>
-                            <option value="completed">تکمیل شده</option>
-                        </select>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" id="cancelProjectBtn">انصراف</button>
-                        <button type="submit" class="btn btn-primary">ذخیره</button>
-                    </div>
-                </form>
-            </div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="projectModalTitle">پروژه جدید</h3>
+          <button class="close-btn" id="closeProjectModal">&times;</button>
         </div>
+        <div class="modal-body">
+          <form id="projectForm">
+            <div class="form-group">
+              <label for="projectName">نام پروژه:</label>
+              <input type="text" id="projectName" name="name" required />
+            </div>
+            <div class="form-group">
+              <label for="projectDescription">توضیحات:</label>
+              <textarea
+                id="projectDescription"
+                name="description"
+                rows="4"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label for="projectStatus">وضعیت:</label>
+              <select id="projectStatus" name="status">
+                <option value="active">فعال</option>
+                <option value="inactive">غیرفعال</option>
+                <option value="completed">تکمیل شده</option>
+              </select>
+            </div>
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="cancelProjectBtn"
+              >
+                انصراف
+              </button>
+              <button type="submit" class="btn btn-primary">ذخیره</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
     <!-- Issue Modal -->
     <div id="issueModal" class="modal">
-        <div class="modal-content large">
-            <div class="modal-header">
-                <h3 id="issueModalTitle">ایشو جدید</h3>
-                <button class="close-btn" id="closeIssueModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="issueForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="issueTitle">عنوان ایشو:</label>
-                            <input type="text" id="issueTitle" name="title" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="issuePriority">اولویت:</label>
-                            <select id="issuePriority" name="priority">
-                                <option value="low">کم</option>
-                                <option value="medium">متوسط</option>
-                                <option value="high">زیاد</option>
-                                <option value="critical">بحرانی</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="issueDescription">توضیحات:</label>
-                        <textarea id="issueDescription" name="description" rows="4"></textarea>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="issueStatus">وضعیت:</label>
-                            <select id="issueStatus" name="status">
-                                <option value="open">باز</option>
-                                <option value="in_progress">در حال انجام</option>
-                                <option value="review">بررسی</option>
-                                <option value="closed">بسته</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="issueAssignedTo">واگذار شده به:</label>
-                            <select id="issueAssignedTo" name="assigned_to">
-                                <option value="">انتخاب کنید...</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" id="cancelIssueBtn">انصراف</button>
-                        <button type="submit" class="btn btn-primary">ذخیره</button>
-                    </div>
-                </form>
-            </div>
+      <div class="modal-content large">
+        <div class="modal-header">
+          <h3 id="issueModalTitle">ایشو جدید</h3>
+          <button class="close-btn" id="closeIssueModal">&times;</button>
         </div>
+        <div class="modal-body">
+          <form id="issueForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="issueTitle">عنوان ایشو:</label>
+                <input type="text" id="issueTitle" name="title" required />
+              </div>
+              <div class="form-group">
+                <label for="issuePriority">اولویت:</label>
+                <select id="issuePriority" name="priority">
+                  <option value="low">کم</option>
+                  <option value="medium">متوسط</option>
+                  <option value="high">زیاد</option>
+                  <option value="critical">بحرانی</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="issueDescription">توضیحات:</label>
+              <textarea
+                id="issueDescription"
+                name="description"
+                rows="4"
+              ></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="issueStatus">وضعیت:</label>
+                <select id="issueStatus" name="status">
+                  <option value="open">باز</option>
+                  <option value="in_progress">در حال انجام</option>
+                  <option value="review">بررسی</option>
+                  <option value="closed">بسته</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="issueAssignedTo">واگذار شده به:</label>
+                <select id="issueAssignedTo" name="assigned_to">
+                  <option value="">انتخاب کنید...</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="cancelIssueBtn"
+              >
+                انصراف
+              </button>
+              <button type="submit" class="btn btn-primary">ذخیره</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
     <!-- User Modal -->
     <div id="userModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="userModalTitle">عضو جدید</h3>
-                <button class="close-btn" id="closeUserFormModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="userForm">
-                    <div class="form-group">
-                        <label for="userName">نام:</label>
-                        <input type="text" id="userName" name="name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="userEmail">ایمیل:</label>
-                        <input type="email" id="userEmail" name="email" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="userRole">نقش:</label>
-                        <select id="userRole" name="role">
-                            <option value="member">عضو</option>
-                            <option value="admin">مدیر</option>
-                            <option value="scrum_master">اسکرام مستر</option>
-                        </select>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" id="cancelUserBtn">انصراف</button>
-                        <button type="submit" class="btn btn-primary">ذخیره</button>
-                    </div>
-                </form>
-            </div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="userModalTitle">عضو جدید</h3>
+          <button class="close-btn" id="closeUserFormModal">&times;</button>
         </div>
+        <div class="modal-body">
+          <form id="userForm">
+            <div class="form-group">
+              <label for="userName">نام:</label>
+              <input type="text" id="userName" name="name" required />
+            </div>
+            <div class="form-group">
+              <label for="userEmail">ایمیل:</label>
+              <input type="email" id="userEmail" name="email" required />
+            </div>
+            <div class="form-group">
+              <label for="userRole">نقش:</label>
+              <select id="userRole" name="role">
+                <option value="member">عضو</option>
+                <option value="admin">مدیر</option>
+                <option value="scrum_master">اسکرام مستر</option>
+              </select>
+            </div>
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="cancelUserBtn"
+              >
+                انصراف
+              </button>
+              <button type="submit" class="btn btn-primary">ذخیره</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
     <!-- Task Modal -->
     <div id="taskModal" class="modal">
-        <div class="modal-content large">
-            <div class="modal-header">
-                <h3 id="taskModalTitle">تسک جدید</h3>
-                <button class="close-btn" id="closeTaskModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="taskForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="taskTitle">عنوان تسک:</label>
-                            <input type="text" id="taskTitle" name="title" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="taskPriority">اولویت:</label>
-                            <select id="taskPriority" name="priority">
-                                <option value="low">کم</option>
-                                <option value="medium">متوسط</option>
-                                <option value="high">زیاد</option>
-                                <option value="critical">بحرانی</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="taskDescription">توضیحات:</label>
-                        <textarea id="taskDescription" name="description" rows="3"></textarea>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="taskStatus">وضعیت:</label>
-                            <select id="taskStatus" name="status">
-                                <option value="pending">در انتظار</option>
-                                <option value="in_progress">در حال انجام</option>
-                                <option value="review">بررسی</option>
-                                <option value="completed">تکمیل شده</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="taskAssignedTo">واگذار شده به:</label>
-                            <select id="taskAssignedTo" name="assigned_to">
-                                <option value="">انتخاب کنید...</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="taskDueDate">تاریخ سررسید:</label>
-                        <input type="datetime-local" id="taskDueDate" name="due_date">
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" id="cancelTaskBtn">انصراف</button>
-                        <button type="submit" class="btn btn-primary">ذخیره</button>
-                    </div>
-                </form>
-            </div>
+      <div class="modal-content large">
+        <div class="modal-header">
+          <h3 id="taskModalTitle">تسک جدید</h3>
+          <button class="close-btn" id="closeTaskModal">&times;</button>
         </div>
+        <div class="modal-body">
+          <form id="taskForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="taskTitle">عنوان تسک:</label>
+                <input type="text" id="taskTitle" name="title" required />
+              </div>
+              <div class="form-group">
+                <label for="taskPriority">اولویت:</label>
+                <select id="taskPriority" name="priority">
+                  <option value="low">کم</option>
+                  <option value="medium">متوسط</option>
+                  <option value="high">زیاد</option>
+                  <option value="critical">بحرانی</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="taskDescription">توضیحات:</label>
+              <textarea
+                id="taskDescription"
+                name="description"
+                rows="3"
+              ></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="taskStatus">وضعیت:</label>
+                <select id="taskStatus" name="status">
+                  <option value="pending">در انتظار</option>
+                  <option value="in_progress">در حال انجام</option>
+                  <option value="review">بررسی</option>
+                  <option value="completed">تکمیل شده</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="taskAssignedTo">واگذار شده به:</label>
+                <select id="taskAssignedTo" name="assigned_to">
+                  <option value="">انتخاب کنید...</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="taskDueDate">تاریخ سررسید:</label>
+              <input type="text" id="taskDueDate" autocomplete="off" />
+              <input type="hidden" id="taskDueDateGregorian" name="due_date" />
+            </div>
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="cancelTaskBtn"
+              >
+                انصراف
+              </button>
+              <button type="submit" class="btn btn-primary">ذخیره</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
     <!-- Subtask Modal -->
     <div id="subtaskModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="subtaskModalTitle">زیرتسک جدید</h3>
-                <button class="close-btn" id="closeSubtaskModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="subtaskForm">
-                    <div class="form-group">
-                        <label for="subtaskTitle">عنوان زیرتسک:</label>
-                        <input type="text" id="subtaskTitle" name="title" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="subtaskDescription">توضیحات:</label>
-                        <textarea id="subtaskDescription" name="description" rows="3"></textarea>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="subtaskStatus">وضعیت:</label>
-                            <select id="subtaskStatus" name="status">
-                                <option value="pending">در انتظار</option>
-                                <option value="in_progress">در حال انجام</option>
-                                <option value="completed">تکمیل شده</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="subtaskAssignedTo">واگذار شده به:</label>
-                            <select id="subtaskAssignedTo" name="assigned_to">
-                                <option value="">انتخاب کنید...</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="subtaskDueDate">تاریخ سررسید:</label>
-                        <input type="datetime-local" id="subtaskDueDate" name="due_date">
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" id="cancelSubtaskBtn">انصراف</button>
-                        <button type="submit" class="btn btn-primary">ذخیره</button>
-                    </div>
-                </form>
-            </div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="subtaskModalTitle">زیرتسک جدید</h3>
+          <button class="close-btn" id="closeSubtaskModal">&times;</button>
         </div>
+        <div class="modal-body">
+          <form id="subtaskForm">
+            <div class="form-group">
+              <label for="subtaskTitle">عنوان زیرتسک:</label>
+              <input type="text" id="subtaskTitle" name="title" required />
+            </div>
+            <div class="form-group">
+              <label for="subtaskDescription">توضیحات:</label>
+              <textarea
+                id="subtaskDescription"
+                name="description"
+                rows="3"
+              ></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="subtaskStatus">وضعیت:</label>
+                <select id="subtaskStatus" name="status">
+                  <option value="pending">در انتظار</option>
+                  <option value="in_progress">در حال انجام</option>
+                  <option value="completed">تکمیل شده</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="subtaskAssignedTo">واگذار شده به:</label>
+                <select id="subtaskAssignedTo" name="assigned_to">
+                  <option value="">انتخاب کنید...</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="subtaskDueDate">تاریخ سررسید:</label>
+              <input type="text" id="subtaskDueDate" autocomplete="off" />
+              <input
+                type="hidden"
+                id="subtaskDueDateGregorian"
+                name="due_date"
+              />
+            </div>
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="cancelSubtaskBtn"
+              >
+                انصراف
+              </button>
+              <button type="submit" class="btn btn-primary">ذخیره</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
     <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
-        <div class="loading-spinner">
-            <i class="fas fa-spinner fa-spin"></i>
-            <p>در حال بارگذاری...</p>
-        </div>
+    <div id="loadingOverlay" class="loading-overlay" style="display: none">
+      <div class="loading-spinner">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>در حال بارگذاری...</p>
+      </div>
     </div>
 
     <!-- Notification -->
-    <div id="notification" class="notification" style="display: none;">
-        <div class="notification-content">
-            <i class="fas fa-check-circle"></i>
-            <span id="notificationMessage"></span>
-        </div>
+    <div id="notification" class="notification" style="display: none">
+      <div class="notification-content">
+        <i class="fas fa-check-circle"></i>
+        <span id="notificationMessage"></span>
+      </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+    <script>
+      // Ensure global jQuery alias
+      window.jQuery = window.jQuery || window.$;
+      window.$ = window.$ || window.jQuery;
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/fa.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr-jalali@1.0.2/dist/jalali.min.js"></script>
     <script src="js/app.js"></script>
-</body>
+  </body>
 </html>
