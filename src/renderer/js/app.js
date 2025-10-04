@@ -162,8 +162,10 @@ class ScrumApp {
         try {
             this.showLoading();
             this.issues = await ipcRenderer.invoke('get-issues', this.currentProject.id);
+            this.projectTasks = null; // Reset project tasks cache
             if (this.currentView === 'board') {
                 this.renderKanbanBoard();
+                this.renderTaskBoard();
             } else {
                 await this.renderIssuesList();
             }
@@ -856,8 +858,9 @@ class ScrumApp {
     // Task Board
     async renderTaskBoard() {
         const taskStatuses = ['pending', 'in_progress', 'review', 'completed'];
-        const tasks = await ipcRenderer.invoke('get-project-tasks', this.currentProject.id);
-        this.projectTasks = tasks;
+        if (!this.projectTasks) {
+            this.projectTasks = await ipcRenderer.invoke('get-project-tasks', this.currentProject.id);
+        }
         const ids = {
             pending: 'pendingTasks',
             in_progress: 'inProgressTasks',
@@ -874,7 +877,7 @@ class ScrumApp {
             const column = document.getElementById(ids[status]);
             const count = document.getElementById(counts[status]);
             column.innerHTML = '';
-            const filtered = tasks.filter(t => t.status === status);
+            const filtered = this.projectTasks.filter(t => t.status === status);
             count.textContent = filtered.length;
             filtered.forEach(task => {
                 const card = this.createTaskCard(task);
