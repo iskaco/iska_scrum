@@ -13,6 +13,9 @@ class ScrumApp {
         this.currentView = 'list'; // 'list' or 'board'
         this.activeTaskTimer = null; // {taskId, startMs}
         
+        this.issuesRequestId = 0;
+        this.tasksRequestId = 0;
+        this.isLoadingIssues = false;
         this.initializeApp();
     }
 
@@ -153,28 +156,40 @@ class ScrumApp {
         document.getElementById('welcomeScreen').style.display = 'none';
         document.getElementById('projectView').style.display = 'block';
         document.getElementById('projectTitle').textContent = project.name;
+        if (this.isLoadingIssues) return;
+        this.currentView = 'list';
+        document.getElementById('listViewBtn').classList.add('active');
+        document.getElementById('boardViewBtn').classList.remove('active');
+        document.getElementById('listView').style.display = 'block';
+        document.getElementById('boardView').style.display = 'none';
         this.loadProjectIssues();
-        this.switchView('list'); // Default to list view
         this.renderTeamTimePanel();
     }
 
     async loadProjectIssues() {
+        const reqId = ++this.issuesRequestId;
+        this.isLoadingIssues = true;
         try {
             this.showLoading();
-            this.issues = await ipcRenderer.invoke('get-issues', this.currentProject.id);
+            const issues = await ipcRenderer.invoke('get-issues', this.currentProject.id);
+            if (reqId !== this.issuesRequestId) return; // stale
+            this.issues = issues || [];
             this.projectTasks = null; // Reset project tasks cache
             if (this.currentView === 'board') {
                 this.renderKanbanBoard();
-                this.renderTaskBoard();
+                await this.renderTaskBoard();
             } else {
                 await this.renderIssuesList();
             }
             this.renderTeamTimePanel();
-            this.hideLoading();
         } catch (error) {
             console.error('Error loading issues:', error);
             this.showNotification('خطا در بارگذاری ایشوها', 'error');
-            this.hideLoading();
+        } finally {
+            if (reqId === this.issuesRequestId) {
+                this.isLoadingIssues = false;
+                this.hideLoading();
+            }
         }
     }
 
@@ -776,6 +791,7 @@ class ScrumApp {
         
         if (view === 'board') {
             this.renderKanbanBoard();
+            this.projectTasks = null; // force fresh fetch
             this.renderTaskBoard();
         } else {
             this.renderIssuesList();
@@ -804,12 +820,12 @@ class ScrumApp {
             });
         });
         
-        // Setup drag and drop
+        // Setup drag and drop for issues
         this.setupDragAndDrop();
     }
 
     setupDragAndDrop() {
-        const columns = document.querySelectorAll('.kanban-column');
+        const columns = document.querySelectorAll('.kanban-column[data-status]');
         
         columns.forEach(column => {
             column.addEventListener('dragover', (e) => {
@@ -825,7 +841,9 @@ class ScrumApp {
                 e.preventDefault();
                 column.classList.remove('drag-over');
                 
-                const issueId = e.dataTransfer.getData('text/plain');
+                const dragged = e.dataTransfer.getData('text/plain');
+                if (!dragged || dragged.startsWith('task:')) return;
+                const issueId = dragged;
                 const newStatus = column.dataset.status;
                 
                 // Find the issue and update its status
@@ -858,9 +876,10 @@ class ScrumApp {
     // Task Board
     async renderTaskBoard() {
         const taskStatuses = ['pending', 'in_progress', 'review', 'completed'];
-        if (!this.projectTasks) {
-            this.projectTasks = await ipcRenderer.invoke('get-project-tasks', this.currentProject.id);
-        }
+        const reqId = ++this.tasksRequestId;
+        const tasks = await ipcRenderer.invoke('get-project-tasks', this.currentProject.id);
+        if (reqId !== this.tasksRequestId) return; // stale
+        this.projectTasks = tasks || [];
         const ids = {
             pending: 'pendingTasks',
             in_progress: 'inProgressTasks',
@@ -922,7 +941,7 @@ class ScrumApp {
                 e.preventDefault();
                 column.classList.remove('drag-over');
                 const data = e.dataTransfer.getData('text/plain');
-                if (!data.startsWith('task:')) return;
+                if (!data || !data.startsWith('task:')) return;
                 const taskId = Number(data.split(':')[1]);
                 const newStatus = column.getAttribute('data-task-status');
                 const task = this.projectTasks.find(t => t.id === taskId);
@@ -931,7 +950,7 @@ class ScrumApp {
                         this.showLoading();
                         await ipcRenderer.invoke('update-task', taskId, { ...task, status: newStatus });
                         task.status = newStatus;
-                        this.renderTaskBoard();
+                        await this.renderTaskBoard();
                         this.showNotification('وضعیت تسک به‌روزرسانی شد');
                         this.hideLoading();
                     } catch (err) {
@@ -1008,16 +1027,11 @@ class ScrumApp {
         const panel = document.getElementById('teamTimePanel');
         if (!panel) return;
         if (!this.users || this.users.length === 0) { panel.style.display = 'none'; return; }
-        const start = new Date(); start.setHours(0,0,0,0);
-        const end = new Date(); end.setHours(23,59,59,999);
-        const fromIso = start.toISOString();
-        const toIso = end.toISOString();
         const items = [];
         for (const user of this.users) {
             try {
-                const entries = await ipcRenderer.invoke('get-user-time-report', user.id, fromIso, toIso);
-                const total = (entries || []).reduce((sum, e) => sum + Number(e.duration_seconds || 0), 0);
-                items.push({ name: user.name, total });
+                const total = await ipcRenderer.invoke('get-user-total-time-today', user.id);
+                items.push({ name: user.name, total: Number(total || 0) });
             } catch {}
         }
         if (items.length === 0) { panel.style.display = 'none'; return; }

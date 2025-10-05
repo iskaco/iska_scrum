@@ -226,6 +226,10 @@ ipcMain.handle('get-user-time-report', async (event, userId, fromIso, toIso) => 
   return await databaseManager.getUserTimeReport(userId, fromIso, toIso);
 });
 
+ipcMain.handle('get-user-total-time-today', async (event, userId) => {
+  return await databaseManager.getUserTotalTimeToday(userId);
+});
+
 // App event handlers
 app.whenReady().then(async () => {
   await initializeDatabase();

@@ -59,6 +59,7 @@ body {
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 500;
+    font-family: 'Vazir', 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     transition: all 0.2s ease;
     display: inline-flex;
     align-items: center;

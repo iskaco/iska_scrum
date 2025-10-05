@@ -473,13 +473,13 @@ class DatabaseManager {
   async getTaskTotalTime(taskId) {
     const { type } = this.config;
     if (type === 'sqlite') {
-      const rows = await this.getSQLiteQuery('SELECT COALESCE(SUM(duration_seconds),0) as total FROM time_entries WHERE task_id = ?', [taskId]);
-      return rows[0]?.total || 0;
+      const rows = await this.getSQLiteQuery("SELECT COALESCE(SUM(CASE WHEN end_time IS NULL THEN CAST(strftime('%s','now') AS INTEGER) - CAST(strftime('%s', start_time) AS INTEGER) ELSE duration_seconds END),0) as total FROM time_entries WHERE task_id = ?", [taskId]);
+      return Number(rows[0]?.total || 0);
     } else if (type === 'mysql') {
-      const [rows] = await this.db.execute('SELECT COALESCE(SUM(duration_seconds),0) as total FROM time_entries WHERE task_id = ?', [taskId]);
-      return rows[0]?.total || 0;
+      const [rows] = await this.db.execute('SELECT COALESCE(SUM(CASE WHEN end_time IS NULL THEN TIMESTAMPDIFF(SECOND, start_time, NOW()) ELSE duration_seconds END),0) as total FROM time_entries WHERE task_id = ?', [taskId]);
+      return Number(rows[0]?.total || 0);
     } else if (type === 'postgresql') {
-      const res = await this.db.query('SELECT COALESCE(SUM(duration_seconds),0) as total FROM time_entries WHERE task_id = $1', [taskId]);
+      const res = await this.db.query('SELECT COALESCE(SUM(CASE WHEN end_time IS NULL THEN EXTRACT(EPOCH FROM (NOW() - start_time)) ELSE duration_seconds END),0) as total FROM time_entries WHERE task_id = $1', [taskId]);
       return Number(res.rows[0]?.total || 0);
     }
   }
@@ -494,6 +494,46 @@ class DatabaseManager {
     } else if (type === 'postgresql') {
       const res = await this.db.query('SELECT * FROM time_entries WHERE user_id = $1 AND start_time >= $2 AND (end_time <= $3 OR end_time IS NULL)', [userId, fromIso, toIso]);
       return res.rows;
+    }
+  }
+
+  async getUserTotalTimeToday(userId) {
+    const { type } = this.config;
+    if (type === 'sqlite') {
+      const rows = await this.getSQLiteQuery(
+        `SELECT COALESCE(SUM(
+            CASE WHEN end_time IS NULL THEN
+              CAST(strftime('%s','now') AS INTEGER) - CAST(strftime('%s', start_time) AS INTEGER)
+            ELSE duration_seconds
+            END
+        ),0) as total
+         FROM time_entries
+         WHERE user_id = ? AND date(start_time) = date('now')`,
+        [userId]
+      );
+      return Number(rows[0]?.total || 0);
+    } else if (type === 'mysql') {
+      const [rows] = await this.db.execute(
+        `SELECT COALESCE(SUM(
+            CASE WHEN end_time IS NULL THEN TIMESTAMPDIFF(SECOND, start_time, NOW())
+                 ELSE duration_seconds END
+        ),0) as total
+         FROM time_entries
+         WHERE user_id = ? AND start_time >= CURDATE()`,
+        [userId]
+      );
+      return Number(rows[0]?.total || 0);
+    } else if (type === 'postgresql') {
+      const res = await this.db.query(
+        `SELECT COALESCE(SUM(
+            CASE WHEN end_time IS NULL THEN EXTRACT(EPOCH FROM (NOW() - start_time))
+                 ELSE duration_seconds END
+        ),0)::bigint as total
+         FROM time_entries
+         WHERE user_id = $1 AND start_time::date = CURRENT_DATE`,
+        [userId]
+      );
+      return Number(res.rows[0]?.total || 0);
     }
   }
 
